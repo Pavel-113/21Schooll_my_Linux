@@ -1,0 +1,16 @@
+services: 
+  testserver: 
+    container_name: testserver 
+    build: .
+    restart: always 
+    links: 
+     - testproxy 
+ 
+  testproxy: 
+    container_name: testproxy 
+    image: nginx 
+    restart: always 
+    ports: 
+      - 80:8080 
+    volumes: 
+      - ./proxy/nginx/:/etc/nginx/

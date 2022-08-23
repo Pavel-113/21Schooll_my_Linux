@@ -1,0 +1,77 @@
+stages:
+  - build
+  - styletest
+  - integration_tests
+  - deploy
+
+build-test:
+  stage: build
+  tags:
+    - cmonte_tag
+  script:
+    - cd src/cat/
+    - make s21_cat
+    - cd ../grep/
+    - make s21_grep
+  after_script:
+    - echo "$CI_JOB_STAGE - $CI_JOB_STATUS"
+    - chmod +x ./telegram_bot.sh
+    - ./telegram_bot.sh Stage
+  artifacts:
+    paths:
+    - src/cat/s21_cat
+    - src/grep/s21_grep
+    expire_in: 30 days
+
+cpplint-test:
+  stage: styletest
+  needs:
+    - job: build-test
+  tags:
+    - cmonte_tag
+  script:
+    - cd src/cat/
+    - make check
+    - cd ../grep/
+    - make check
+  after_script:
+    - echo "$CI_JOB_STAGE - $CI_JOB_STATUS"
+    - chmod +x ./telegram_bot.sh
+    - ./telegram_bot.sh Stage
+
+integration-tests:
+  stage: integration_tests
+  needs:
+    - job: build-test
+    - job: cpplint-test
+  tags:
+    - cmonte_tag
+  script:
+    - cd src/cat/
+    - make test
+    - cd ../grep/
+    - make test
+after_script:
+    - echo "$CI_JOB_STAGE - $CI_JOB_STATUS"
+    - chmod +x ./telegram_bot.sh
+    - ./telegram_bot.sh Stage
+  
+deploy:
+  stage: deploy
+  needs:
+    - job: build-test
+    - job: cpplint-test
+    - job: integration-tests
+      artifacts: true
+  tags:
+    - cmonte_tag
+  script:
+    - chmod +x deploy.sh
+    - ./deploy.sh
+  after_script:
+    - echo "$CI_JOB_STAGE - $CI_JOB_STATUS"
+    - chmod +x ./telegram_bot.sh
+    - ./telegram_bot.sh Stage
+  rules:
+    - when: manual
+  allow_failure: false
